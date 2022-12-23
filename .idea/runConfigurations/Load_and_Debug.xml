@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Load and Debug" type="com.jetbrains.cidr.embedded.customgdbserver.type" factoryName="com.jetbrains.cidr.embedded.customgdbserver.factory" PROGRAM_PARAMS="-c &quot;set ESP_RTOS none&quot;  -f board/esp32c3-builtin.cfg -c &quot;program_esp target/riscv32imac-unknown-none-elf/debug/c3.bin 0x10000&quot;" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="c3" TARGET_NAME="build" CONFIG_NAME="build" version="1" RUN_PATH="$PROJECT_DIR$/target/riscv32imac-unknown-none-elf/debug/c3">
+    <custom-gdb-server version="1" gdb-connect="localhost:3333" executable="C:\Espressif\tools\openocd-esp32\v0.11.0-esp32-20221026\openocd-esp32\bin\openocd.exe" warmup-ms="5000" download-type="NONE" reset-cmd="monitor reset" reset-type="AFTER_DOWNLOAD">
+      <debugger kind="GDB">C:\Espressif\tools\riscv32-esp-elf\esp-2022r1-11.2.0\riscv32-esp-elf\bin\riscv32-esp-elf-gdb.exe</debugger>
+    </custom-gdb-server>
+    <method v="2">
+      <option name="ToolBeforeRunTask" enabled="true" actionId="Tool_External Tools_bulid" />
+    </method>
+  </configuration>
+</component>

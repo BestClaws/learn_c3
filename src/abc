@@ -1,0 +1,58 @@
+#![no_std]
+#![no_main]
+
+use esp_backtrace as _;
+use esp_println::println;
+
+use riscv_rt::entry;
+
+use esp32c3_hal as hal;
+
+use hal::prelude::*;
+use hal::peripherals::Peripherals;
+use hal::clock::ClockControl;
+use hal::gpio::IO;
+use hal::timer::TimerGroup;
+use hal::Delay;
+use hal::Rtc;
+
+
+#[entry]
+fn main() -> ! {
+    let peripherals = Peripherals::take();
+    let system = peripherals.SYSTEM.split();
+
+    let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
+
+    let mut rtc = Rtc::new(peripherals.RTC_CNTL);
+    let timer_group0 = TimerGroup::new(peripherals.TIMG0, &clocks);
+    let mut wdt0 = timer_group0.wdt;
+    let timer_group1 = TimerGroup::new(peripherals.TIMG1, &clocks);
+    let mut wdt1 = timer_group1.wdt;
+
+    rtc.swd.disable();
+    rtc.rwdt.disable();
+
+    wdt0.disable();
+    wdt1.disable();
+
+    let mut timer0 = timer_group0.timer0;
+
+    let mut delay = Delay::new(&clocks);
+
+    let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
+    let mut trig = io.pins.gpio20.into_push_pull_output();
+
+    trig.set_low();
+
+    loop {
+
+
+
+        trig.set_high();
+        trig.set_low();
+    }
+
+}
+
+
