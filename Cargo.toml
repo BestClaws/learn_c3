@@ -12,9 +12,6 @@ esp-backtrace = { version = "0.4.0", features = ["esp32c3", "panic-handler"] }
 esp-println = { version ="0.3.1", features=["esp32c3"]}
 riscv-rt = { version = "0.10"}
 fugit="0.3.6"
-embedded-graphics = "0.7.1"
-ssd1306           = "0.7.1"
-smart-leds = "0.3.0"
-esp-hal-common = {git="https://github.com/esp-rs/esp-hal", features=["smartled", "esp32c3"]}
+
 
 

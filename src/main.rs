@@ -1,116 +1,89 @@
+//! Turns on LED with the option to change LED intensity depending on `duty`
+//! value. Possible values (`u32`) are in range 0..100.
+//!
+//! This assumes that a LED is connected to the pin assigned to `led`. (GPIO4)
 
 #![no_std]
 #![no_main]
 
-use esp32c3_hal::{
-    clock::ClockControl,
-    gpio::IO,
-    peripherals::Peripherals,
-    prelude::*,
-    timer::TimerGroup,
-    Delay,
-    Rtc,
-};
+use esp32c3_hal::{clock::ClockControl, gpio::IO, ledc::{
+    channel::{self, ChannelIFace},
+    timer::{self, TimerIFace},
+    LSGlobalClkSource,
+    LowSpeed,
+    LEDC,
+}, peripherals::Peripherals, prelude::*, timer::TimerGroup, Rtc, Delay};
 use esp_backtrace as _;
 use riscv_rt::entry;
-
-use esp_println::println;
-use crate::Status::MeasuringComplete;
 
 #[entry]
 fn main() -> ! {
     let peripherals = Peripherals::take();
-    let system = peripherals.SYSTEM.split();
+    let mut system = peripherals.SYSTEM.split();
     let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
 
-    // disable watch dogs
     let mut rtc = Rtc::new(peripherals.RTC_CNTL);
     let timer_group0 = TimerGroup::new(peripherals.TIMG0, &clocks);
     let mut wdt0 = timer_group0.wdt;
     let timer_group1 = TimerGroup::new(peripherals.TIMG1, &clocks);
     let mut wdt1 = timer_group1.wdt;
 
+    // Disable watchdog timers
     rtc.swd.disable();
     rtc.rwdt.disable();
     wdt0.disable();
     wdt1.disable();
-    // end disable watch dogs
-
 
     let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
-    let mut trig = io.pins.gpio4.into_push_pull_output();
-    let echo = io.pins.gpio5.into_pull_down_input();
+    let led = io.pins.gpio5.into_push_pull_output();
 
+    let mut ledc = LEDC::new(
+        peripherals.LEDC,
+        &clocks,
+        &mut system.peripheral_clock_control,
+    );
+    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
+    let mut lstimer0 = ledc.get_timer::<LowSpeed>(timer::Number::Timer2);
 
+    lstimer0
+        .configure(timer::config::Config {
+            duty: timer::config::Duty::Duty14Bit,
+            clock_source: timer::LSClockSource::APBClk,
+            frequency: 50u32.Hz(),
+        })
+        .unwrap();
 
-    // setup timers and delays.
-    let mut timer0 = timer_group0.timer0;
-    timer0.set_counter_active(true);
+    let mut channel0 = ledc.get_channel(channel::Number::Channel1, led);
+    let mut direction:i8 = 1;
+    let mut count:u32 = 0;
 
-    // end setup timers and delays.
+    let mut delay = Delay::new(&clocks);
 
-
-    // set initial state.
-    trig.set_low().unwrap();
-    let mut status = Status::PulseStart;
-
-    // let mut pulse_start = 0;
-    // let mut count = 0;
-
-    const DIV: u64 = 40;
+    channel0
+        .configure(channel::config::Config {
+            timer: &lstimer0,
+            duty_pct: 10,
+        })
+        .unwrap();
+    use esp_println::println;
 
     loop {
 
+        println!("{}",count);
 
-        if (status == Status::PulseStart) {
-            trig.set_high().unwrap();
-            // pulse_start = timer0.now();
-            status = Status::Pulsing(timer0.now() + 10 * DIV);
+        channel0.set_duty_hw(count);
+        // delay.delay_ms(1u32);
+
+        if(direction > 0) {
+            count += 2;
+        } else {
+            count -= 2;
         }
 
-        if let Status::Pulsing(till) = status {
-                let now = timer0.now();
-            if (now > till) {
-                trig.set_low().unwrap();
-                if(echo.is_low().unwrap()) {
-                    status = Status::ReadyToMeasure;
-                } else {
-                    status = Status::UnreadyToMeasure;
-                }
-                // println!("pulse_start: {}, till: {}, count: {}, now: {}, error: {}, tim taken: {}", pulse_start / D, till /D  , count, now / D, (now - till) / D,  (now - pulse_start) / D);
-                // status = Status::PulseStart;
-                // count = 0;
-            } else {
-                // count+=1;
-            }
+        if(count >= 2200) {
+            direction = -1;
+        } else if (count < 200) {
+            direction = 1;
         }
-
-        // if (status == Status::UnreadyToMeasure && echo.is_low().unwrap()) {
-        //     status = Status::PulseStart;
-        // }
-
-        if (status == Status::ReadyToMeasure && echo.is_high().unwrap()) {
-            status = Status::Measuring(timer0.now());
-        }
-
-        if let Status::Measuring(since) = status {
-            if (echo.is_low().unwrap()) {
-                let time_taken = timer0.now() - since;
-                status = Status::MeasuringComplete(time_taken);
-                println!("distance: {}", (time_taken / DIV) as f32 * 0.034 / 2_f32);
-                status = Status::PulseStart;
-            }
-        }
-
     }
-}
-
-#[derive(PartialEq)]
-enum Status {
-    PulseStart,
-    Pulsing(u64), // till
-    UnreadyToMeasure,
-    ReadyToMeasure,
-    Measuring(u64), // since
-    MeasuringComplete(u64), // time high.
 }
