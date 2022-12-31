@@ -8,10 +8,21 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 esp32c3-hal = { git="https://github.com/esp-rs/esp-hal"}
 
+riscv={version="0.10.0"}
+riscv-rt = { version = "0.10"}
+
+
 esp-backtrace = { version = "0.4.0", features = ["esp32c3", "panic-handler"] }
 esp-println = { version ="0.3.1", features=["esp32c3"]}
-riscv-rt = { version = "0.10"}
+
 fugit="0.3.6"
+critical-section = "1.1.1"
+
+embedded-hal       = { version = "0.2.7", features = ["unproven"] }
+embedded-graphics = "0.7.1"
 
 
-
+st7735-lcd = "0.8.1"
+#ssd1306 = "0.7.1"
+tinybmp="0.4.0"
+arrayvec={version="0.7.2", default-features=false}
